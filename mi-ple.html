@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><title>Mi PLE de la asignatura</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root{--bg:#f7f6f2;--card:#fff;--tx:#1f2a2e;--mu:#6b777c;--ac:#1d6f6b;--bd:#e2e0d8;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14191b;--card:#1d2528;--tx:#e8eced;--mu:#93a1a6;--ac:#5cc4bd;--bd:#2c3639}}
+:root[data-theme="dark"]{--bg:#14191b;--card:#1d2528;--tx:#e8eced;--mu:#93a1a6;--ac:#5cc4bd;--bd:#2c3639}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:640px;margin:0 auto;padding:16px}
+#tit{width:100%;font:700 22px/1.2 inherit;font-family:inherit;border:0;border-bottom:2px solid var(--bd);background:transparent;color:var(--tx);padding:6px 0;outline:none}
+#tit:focus{border-color:var(--ac)}
+#st{color:var(--mu);font-size:12px;margin:4px 0 12px}
+#tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+#tabs button{flex:0 0 auto;border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:20px;padding:7px 14px;font:inherit;font-size:14px;cursor:pointer}
+#tabs button.on{background:var(--ac);border-color:var(--ac);color:#fff}
+#tabs small{opacity:.7}
+.box{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;margin:12px 0;display:grid;gap:8px}
+input,textarea,select{width:100%;font:inherit;font-size:15px;border:1px solid var(--bd);border-radius:8px;padding:8px;background:var(--bg);color:var(--tx)}
+textarea{min-height:60px;resize:vertical}
+#addb{background:var(--ac);color:#fff;border:0;border-radius:8px;padding:10px;font:inherit;font-weight:600;cursor:pointer}
+article{display:flex;gap:8px;justify-content:space-between;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:8px}
+article div{min-width:0}
+article a{display:block;color:var(--ac);font-size:13px;overflow-wrap:anywhere}
+article p{margin:4px 0;white-space:pre-wrap;overflow-wrap:anywhere}
+article small{color:var(--mu)}
+article button{border:0;background:none;color:var(--mu);font-size:16px;cursor:pointer;align-self:flex-start}
+input[type=checkbox]{width:auto}
+.ck{display:flex;gap:8px;align-items:center;font-size:14px}
+#aut{margin-top:8px}
+.sub{color:var(--mu);font-size:13px;margin-top:6px}
+.empty{color:var(--mu);text-align:center;padding:20px 0}
+</style></head>
+<body><main>
+<input id="tit" aria-label="Título del PLE">
+<input id="aut" aria-label="Autor/a" placeholder="Tu nombre y apellidos">
+<div class="sub">Entrega ordinaria final · Febrero de 2027 · 5 actividades obligatorias (2 puntos cada una)</div>
+<div id="st"></div>
+<div id="tabs"></div>
+<div class="box" id="addbox">
+<input id="ft" placeholder="Título">
+<input id="fu" placeholder="Enlace (opcional)" inputmode="url">
+<textarea id="fn" placeholder="Nota o reflexión (opcional)"></textarea>
+<button id="addb">Añadir</button>
+</div>
+<div id="list"></div>
+</main>
+<script>
+const TABS=[["tareas","Tareas",""],["trabajos","Trabajos","Añade aquí los trabajos que vayas entregando."],["recursos","Recursos","Guarda artículos, vídeos, blogs y fuentes útiles."],["reflexiones","Reflexiones","Escribe qué estás aprendiendo y cómo."],["red","Mi red","Anota personas, herramientas y comunidades."]];
+const TT=[["B1 · Póster interactivo","Síntesis rigurosa, navegación accesible, audio o vídeo, imágenes con alternativa textual, enlaces y licencias."],["B2 · Unidad didáctica","3–6 páginas, APA 7: contexto, 4–6 objetivos, metodología, recursos, 4–6 sesiones y evaluación."],["B3 · Infografía con Canva","Herramientas, REA, licencias y accesibilidad; equilibrio texto-imagen, audio o vídeo y créditos."],["B4 · Presentación interactiva","MALL, redes sociales, e-learning, MOOC y LMOOC; interactividad con función pedagógica (quiz, encuesta…)."],["B5 · Vídeo","4–5 min con audio propio y subtítulos o transcripción; gamificación, chatbot, metaverso o IA aplicada a lenguas; REA con créditos."]],CK=["Enlace probado en ventana privada","Accesible (alt, contraste, subtítulos)","Fuentes y licencias atribuidas","Si usé IA: herramienta, prompts y anexo (~1 pág.)"],KEY="ple-v1",$=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let S={titulo:"Mi PLE · Recursos digitales para la enseñanza de lenguas",autor:"",tareas:Array.from({length:5},()=>({e:0,u:"",n:"",c:[0,0,0,0]})),trabajos:[],recursos:[],reflexiones:[],red:[]},tab="tareas",ref=null,busy=false,again=false;
+function render(){
+ $("#tit").value=S.titulo;$("#aut").value=S.autor||"";
+ $("#tabs").innerHTML=TABS.map(t=>`<button class="${t[0]==tab?"on":""}" data-t="${t[0]}">${t[1]} <small>${t[0]=="tareas"?S.tareas.filter(k=>k.e==2).length+"/5":S[t[0]].length}</small></button>`).join("");
+ $("#addbox").style.display=tab=="tareas"?"none":"grid";
+ if(tab=="tareas"){$("#list").innerHTML=S.tareas.map((k,n)=>`<article><div style="flex:1;display:grid;gap:6px"><b>${TT[n][0]} <small>· 2,00 pts</small></b><small>${TT[n][1]}</small><select data-k="${n}" data-f="e">${["Pendiente","En curso","Entregada"].map((o,j)=>`<option value="${j}"${k.e==j?" selected":""}>${o}</option>`).join("")}</select><input data-k="${n}" data-f="u" value="${esc(k.u)}" placeholder="Enlace al trabajo" inputmode="url">${/^https?:\/\//i.test(k.u)?`<a href="${esc(k.u)}" target="_blank" rel="noopener">Abrir ↗</a>`:""}<textarea data-k="${n}" data-f="n" placeholder="Notas">${esc(k.n)}</textarea>${CK.map((c,j)=>`<label class="ck"><input type="checkbox" data-k="${n}" data-c="${j}"${(k.c||[])[j]?" checked":""}> ${c}</label>`).join("")}</div></article>`).join("");return}
+ const items=S[tab],T=TABS.find(t=>t[0]==tab);
+ $("#list").innerHTML=items.length?items.map(i=>`<article><div><b>${esc(i.t)}</b>${/^https?:\/\//i.test(i.u||"")?`<a href="${esc(i.u)}" target="_blank" rel="noopener">${esc(i.u.replace(/^https?:\/\//i,"").slice(0,50))}</a>`:""}${i.n?`<p>${esc(i.n)}</p>`:""}<small>${esc(i.d||"")}</small></div><button data-x="${esc(i.id)}" aria-label="Eliminar">✕</button></article>`).join(""):`<p class="empty">${T[2]}</p>`;
+}
+async function save(){
+ if(ref){
+  if(busy){again=true;return}
+  busy=true;
+  try{await ref.set(JSON.parse(JSON.stringify(S)))}catch(e){$("#st").textContent="No se pudo guardar. Inténtalo de nuevo."}
+  busy=false;
+  if(again){again=false;save()}
+ }else{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+}
+async function init(){
+ render();
+ try{
+  const c=window.claude;
+  const u=c&&await c.use("user"),db=c&&await c.use("db");
+  if(u&&db){
+   const id=await u.id();
+   ref=db.collection("data/users/"+id).doc("ple");
+   const s=await ref.get();
+   if(s.exists)S={...S,...JSON.parse(JSON.stringify(s.data()))};
+   $("#st").textContent="Guardado automáticamente en tu cuenta (privado).";
+   render();return;
+  }
+ }catch(e){}
+ try{const r=localStorage.getItem(KEY);if(r)S={...S,...JSON.parse(r)}}catch(e){}
+ $("#st").textContent="Guardado en este navegador.";
+ render();
+}
+$("#tit").onchange=e=>{S.titulo=e.target.value;save()};
+$("#aut").onchange=e=>{S.autor=e.target.value;save()};
+$("#tabs").onclick=e=>{const b=e.target.closest("[data-t]");if(b){tab=b.dataset.t;render()}};
+$("#list").onchange=e=>{const el=e.target.closest("[data-k]");if(!el)return;const k=S.tareas[+el.dataset.k],f=el.dataset.f;if(el.dataset.c!==undefined){k.c=k.c||[0,0,0,0];k.c[+el.dataset.c]=el.checked?1:0}else k[f]=f=="e"?+el.value:el.value;save();if(f=="e"||f=="u")render()};
+$("#list").onclick=e=>{const x=e.target.closest("[data-x]");if(x){S[tab]=S[tab].filter(i=>i.id!==x.dataset.x);render();save()}};
+$("#addb").onclick=()=>{
+ const t=$("#ft").value.trim();if(!t)return;
+ S[tab].unshift({id:Date.now().toString(36),t,u:$("#fu").value.trim(),n:$("#fn").value.trim(),d:new Date().toLocaleDateString("es-ES")});
+ ["#ft","#fu","#fn"].forEach(s=>$(s).value="");
+ render();save();
+};
+init();
+</script></body></html>
